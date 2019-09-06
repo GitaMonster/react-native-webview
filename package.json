@@ -1,15 +1,15 @@
 {
-  "name": "react-native-webview",
-  "description": "React Native WebView component for iOS, Android, and Windows 10 (coming soon)",
+  "name": "gr-react-native-webview",
+  "description": "React Native WebView component for iOS, Android, and Windows 10 (coming soon), that includes support for HTTP authentication",
   "main": "index.js",
   "typings": "index.d.ts",
-  "author": "Jamon Holmgren <jamon@infinite.red>",
+  "author": "Colin Smith <colin.smith@globalrelay.net>",
   "contributors": [
-    "Thibault Malbranche <malbranche.thibault@gmail.com>"
+    "Adrian Bocker <adrian.bocker@globalrelay.net>"
   ],
   "license": "MIT",
-  "version": "6.9.0",
-  "homepage": "https://github.com/react-native-community/react-native-webview#readme",
+  "version": "6.9.3",
+  "homepage": "https://github.com/Gitamonster/react-native-webview#readme",
   "scripts": {
     "ci": "CI=true && yarn lint && yarn test",
     "ci:publish": "yarn semantic-release",
@@ -54,7 +54,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/react-native-community/react-native-webview.git"
+    "url": "https://github.com/GitaMonster/react-native-webview.git"
   },
   "files": [
     "android",
@@ -62,6 +62,6 @@
     "lib",
     "index.js",
     "index.d.ts",
-    "react-native-webview.podspec"
+    "gr-react-native-webview.podspec"
   ]
 }

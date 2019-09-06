@@ -19,12 +19,17 @@
 
 @end
 
-@interface RNCWKWebView : RCTView
+@interface RNCWKWebView : RCTView {
+  NSURLCredential *credential_;
+}
+
 
 @property (nonatomic, weak) id<RNCWKWebViewDelegate> delegate;
 @property (nonatomic, copy) NSDictionary *source;
 @property (nonatomic, assign) BOOL messagingEnabled;
 @property (nonatomic, copy) NSString *injectedJavaScript;
+@property (nonatomic, copy) NSString *defaultUsername;
+@property (nonatomic, copy) NSString *defaultPassword;
 @property (nonatomic, assign) BOOL scrollEnabled;
 @property (nonatomic, assign) BOOL sharedCookiesEnabled;
 @property (nonatomic, assign) BOOL pagingEnabled;
@@ -50,10 +55,10 @@
 @property (nonatomic, assign) BOOL showsVerticalScrollIndicator;
 @property (nonatomic, assign) BOOL directionalLockEnabled;
 
-+ (void)setClientAuthenticationCredential:(nullable NSURLCredential*)credential;
 - (void)postMessage:(NSString *)message;
 - (void)injectJavaScript:(NSString *)script;
 - (void)goForward;
+- (void)clearCredentials;
 - (void)goBack;
 - (void)reload;
 - (void)stopLoading;

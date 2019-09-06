@@ -8,12 +8,14 @@
 
 **React Native WebView** is a modern, well-supported, and cross-platform WebView for React Native. It is intended to be a replacement for the built-in WebView (which will be [removed from core](https://github.com/react-native-community/discussions-and-proposals/pull/3)).
 
+This fork of the React Native WebView provides support for authentication challenges by introducing a username/password panel that can be populated and submitted to complete the authentication request.
+
 ## Core Maintainers - Sponsoring companies
 
-_This project is maintained for free by these people using both their free time and their company work time._
+_This project is maintained by:
 
-- [Thibault Malbranche](https://github.com/Titozzz) ([Twitter @titozzz](https://twitter.com/titozzz)) from [Brigad](https://brigad.co/about)
-- [Jamon Holmgren](https://github.com/jamonholmgren) ([Twitter @jamonholmgren](https://twitter.com/jamonholmgren)) from [Infinite Red](https://infinite.red/react-native)
+- [Colin Smith]
+- [Adrian Bocker](https://github.com/Gitamonster)
 
 ## Platforms Supported
 

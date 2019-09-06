@@ -11,6 +11,8 @@
 #import <React/RCTDefines.h>
 #import "RNCWKWebView.h"
 
+static NSString * const NOT_AVAILABLE_ERROR_MESSAGE = @"WebKit/WebKit-Components are only available with iOS11 and higher!";
+
 @interface RNCWKWebViewManager () <RNCWKWebViewDelegate>
 @end
 
@@ -49,6 +51,8 @@ RCT_EXPORT_VIEW_PROPERTY(onLoadingError, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onLoadingProgress, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onShouldStartLoadWithRequest, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(injectedJavaScript, NSString)
+RCT_EXPORT_VIEW_PROPERTY(defaultUsername, NSString)
+RCT_EXPORT_VIEW_PROPERTY(defaultPassword, NSString)
 RCT_EXPORT_VIEW_PROPERTY(allowsInlineMediaPlayback, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(mediaPlaybackRequiresUserAction, BOOL)
 #if WEBKIT_IOS_10_APIS_AVAILABLE
@@ -84,6 +88,18 @@ RCT_EXPORT_METHOD(postMessage:(nonnull NSNumber *)reactTag message:(NSString *)m
       RCTLogError(@"Invalid view returned from registry, expecting RNCWKWebView, got: %@", view);
     } else {
       [view postMessage:message];
+    }
+  }];
+}
+
+RCT_EXPORT_METHOD(clearCredentials:(nonnull NSNumber *)reactTag)
+{
+  [self.bridge.uiManager addUIBlock:^(__unused RCTUIManager *uiManager, NSDictionary<NSNumber *, RNCWKWebView *> *viewRegistry) {
+    RNCWKWebView *view = viewRegistry[reactTag];
+    if (![view isKindOfClass:[RNCWKWebView class]]) {
+      RCTLogError(@"Invalid view returned from registry, expecting RCTWebView, got: %@", view);
+    } else {
+      [view clearCredentials];
     }
   }];
 }
@@ -134,6 +150,25 @@ RCT_EXPORT_METHOD(injectJavaScript:(nonnull NSNumber *)reactTag script:(NSString
       [view injectJavaScript:script];
     }
   }];
+}
+
+-(NSDictionary *)createCookieList:(NSArray<NSHTTPCookie *>*)cookies
+{
+  NSMutableDictionary *cookieList = [NSMutableDictionary dictionary];
+  for (NSHTTPCookie *cookie in cookies) {
+    // NSLog(@"COOKIE: %@", cookie);
+    [cookieList setObject:[self createCookieData:cookie] forKey:cookie.name];
+  }
+  return cookieList;
+}
+-(NSDictionary *)createCookieData:(NSHTTPCookie *)cookie
+{
+  NSMutableDictionary *cookieData = [NSMutableDictionary dictionary];
+  [cookieData setObject:cookie.value forKey:@"value"];
+  [cookieData setObject:cookie.name forKey:@"name"];
+  [cookieData setObject:cookie.domain forKey:@"domain"];
+  [cookieData setObject:cookie.path forKey:@"path"];
+  return cookieData;
 }
 
 RCT_EXPORT_METHOD(goBack:(nonnull NSNumber *)reactTag)

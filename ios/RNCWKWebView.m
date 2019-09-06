@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#import "AppDelegate.h"
 #import "RNCWKWebView.h"
 #import <React/RCTConvert.h>
 #import <React/RCTAutoInsetsProtocol.h>
@@ -26,6 +27,8 @@ static NSURLCredential* clientAuthenticationCredential;
   return nil;
 }
 @end
+
+static NSString * const NOT_AVAILABLE_ERROR_MESSAGE = @"WebKit/WebKit-Components are only available with iOS11 and higher!";
 
 @interface RNCWKWebView () <WKUIDelegate, WKNavigationDelegate, WKScriptMessageHandler, UIScrollViewDelegate, RCTAutoInsetsProtocol>
 @property (nonatomic, copy) RCTDirectEventBlock onLoadingStart;
@@ -146,8 +149,6 @@ static NSURLCredential* clientAuthenticationCredential;
       ? WKAudiovisualMediaTypeAll
       : WKAudiovisualMediaTypeNone;
     wkWebViewConfig.dataDetectorTypes = _dataDetectorTypes;
-#else
-    wkWebViewConfig.mediaPlaybackRequiresUserAction = _mediaPlaybackRequiresUserAction;
 #endif
 
     if (_applicationNameForUserAgent) {
@@ -623,22 +624,93 @@ static NSURLCredential* clientAuthenticationCredential;
   return [[NSMutableDictionary alloc] initWithDictionary: event];
 }
 
-+ (void)setClientAuthenticationCredential:(nullable NSURLCredential*)credential {
-  clientAuthenticationCredential = credential;
+// CS todo make async
+- (void)clearCredentials {
+  
+  credential_ = nil;
+  // reset the credentials cache, just in case...
+  NSDictionary *credentialsDict = [[NSURLCredentialStorage sharedCredentialStorage] allCredentials];
+  
+  if ([credentialsDict count] > 0) {
+    // the credentialsDict has NSURLProtectionSpace objs as keys and dicts of userName => NSURLCredential
+    NSEnumerator *protectionSpaceEnumerator = [credentialsDict keyEnumerator];
+    id urlProtectionSpace;
+    
+    // iterate over all NSURLProtectionSpaces
+    while (urlProtectionSpace = [protectionSpaceEnumerator nextObject]) {
+      NSEnumerator *userNameEnumerator = [credentialsDict[urlProtectionSpace] keyEnumerator];
+      id userName;
+      
+      // iterate over all usernames for this protectionspace, which are the keys for the actual NSURLCredentials
+      while (userName = [userNameEnumerator nextObject]) {
+        NSURLCredential *cred = [credentialsDict[urlProtectionSpace] objectForKey:userName];
+        [[NSURLCredentialStorage sharedCredentialStorage] removeCredential:cred forProtectionSpace:urlProtectionSpace];
+      }
+    }
+  }
+  
+  [[NSURLCache sharedURLCache] removeAllCachedResponses];
+  
+  NSHTTPCookieStorage *cookieStorage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
+  NSArray *cookies = [cookieStorage cookies];
+  
+  id cookie;
+  for (cookie in cookies) {
+    [cookieStorage deleteCookie:cookie];
+  }
 }
 
-- (void)                    webView:(WKWebView *)webView
-  didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
-                  completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition disposition, NSURLCredential * _Nullable))completionHandler
-{
-  if (!clientAuthenticationCredential) {
-    completionHandler(NSURLSessionAuthChallengePerformDefaultHandling, nil);
-    return;
-  }
-  if ([[challenge protectionSpace] authenticationMethod] == NSURLAuthenticationMethodClientCertificate) {
-    completionHandler(NSURLSessionAuthChallengeUseCredential, clientAuthenticationCredential);
+- (void)webView:(WKWebView *)webView didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition disposition, NSURLCredential * _Nullable credential))completionHandler {
+  if (challenge != nil && [[challenge protectionSpace] realm] == nil) {
+    if ([[challenge protectionSpace] authenticationMethod] == NSURLAuthenticationMethodServerTrust) {
+      NSURLCredential *credential = [NSURLCredential credentialForTrust:challenge.protectionSpace.serverTrust];
+      [challenge.sender useCredential:credential forAuthenticationChallenge:challenge];
+      completionHandler(NSURLSessionAuthChallengeUseCredential, credential);
+    } else {
+      [challenge.sender continueWithoutCredentialForAuthenticationChallenge:challenge];
+      completionHandler(NSURLSessionAuthChallengePerformDefaultHandling, nil);
+    }
+  } else if (credential_ && [challenge previousFailureCount] < 1) {
+    [challenge.sender useCredential:credential_ forAuthenticationChallenge:challenge];
+    completionHandler(NSURLSessionAuthChallengeUseCredential, credential_);
   } else {
-    completionHandler(NSURLSessionAuthChallengePerformDefaultHandling, nil);
+    //GRLOG_D(@"handle NTLM auth");
+    NSString *challengeDomain = challenge.protectionSpace.host;
+    UIAlertController *alertController = [UIAlertController alertControllerWithTitle:NSLocalizedString(@"Authentication Required", @"Authentication Required")
+                                                                             message:challengeDomain
+                                                                      preferredStyle:UIAlertControllerStyleAlert];
+    [alertController addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+      textField.placeholder = NSLocalizedString(@"Login", @"Login");
+      textField.text = _defaultUsername;
+    }];
+    
+    [alertController addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+      textField.placeholder = NSLocalizedString(@"Password", @"Password");
+      textField.secureTextEntry = YES;
+      textField.text = _defaultPassword;
+    }];
+    
+    UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:NSLocalizedString(@"Cancel", @"Cancel") style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
+      //[self onCloseClicked:nil];
+      [challenge.sender cancelAuthenticationChallenge:challenge];
+      completionHandler(NSURLSessionAuthChallengeCancelAuthenticationChallenge, nil);
+    }];
+    
+    UIAlertAction *loginAction = [UIAlertAction actionWithTitle:NSLocalizedString(@"Login", @"Login") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        UITextField *username = alertController.textFields[0];
+      UITextField *password = alertController.textFields[1];
+      credential_ = [NSURLCredential credentialWithUser:username.text password:password.text persistence:NSURLCredentialPersistenceNone];
+      [challenge.sender useCredential:credential_ forAuthenticationChallenge:challenge];
+      completionHandler(NSURLSessionAuthChallengeUseCredential, credential_);
+    }];
+    
+    [alertController addAction:cancelAction];
+    [alertController addAction:loginAction];
+    
+    //    [self presentViewController:alertController animated:YES completion:nil];
+    AppDelegate *delegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];
+    [delegate.window.rootViewController presentViewController:alertController animated:YES completion:nil];
+    
   }
 }
 
