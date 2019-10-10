@@ -35,6 +35,16 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 
+// Imports for custom GR overrides
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.AlertDialog.Builder;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.webkit.HttpAuthHandler;
+import android.text.InputType;
+import android.content.DialogInterface;
+
 import com.facebook.react.views.scroll.ScrollEvent;
 import com.facebook.react.views.scroll.ScrollEventType;
 import com.facebook.react.views.scroll.OnScrollDispatchHelper;
@@ -493,8 +503,52 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
 
   @Override
   protected void addEventEmitters(ThemedReactContext reactContext, WebView view) {
-    // Do not register default touch emitter and let WebView implementation handle touches
-    view.setWebViewClient(new RNCWebViewClient());
+    // Do not register default touch eRNCWebViewClientmitter and let WebView implementation handle touches
+    RNCWebViewClient webViewClient = new RNCWebViewClient() {
+      @Override
+      public void onReceivedHttpAuthRequest(WebView webView, HttpAuthHandler handler, String host, String realm) {
+        // final WebView mView = webView;
+        // final HttpAuthHandler mHandler = handler;
+        Activity activity = reactContext.getCurrentActivity();
+
+        EditText usernameInput = new EditText(activity);
+        usernameInput.setHint("Username");
+
+        EditText passwordInput = new EditText(activity);
+        passwordInput.setHint("Password");
+        passwordInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+
+        LinearLayout linearLayout = new LinearLayout(activity);
+        linearLayout.setOrientation(LinearLayout.VERTICAL);
+        linearLayout.addView(usernameInput);
+        linearLayout.addView(passwordInput);
+
+        AlertDialog.Builder authDialog = new AlertDialog
+                .Builder(activity)
+                .setTitle("Authentication")
+                .setView(linearLayout)
+                .setCancelable(false)
+                .setPositiveButton("Login", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int button) {
+                        handler.proceed(usernameInput.getText().toString(), passwordInput.getText().toString());
+                        dialog.dismiss();
+                    }
+                })
+                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int button) {
+                        dialog.dismiss();
+                        webView.stopLoading();
+                        // onLoadListener.onAuthCancel((MyWebView)mView, mTitleTextView);
+                    }
+                });
+
+        if (webView !=null) {
+          authDialog.show();
+        }
+      }
+    };
+    // view.setWebViewClient(new RNCWebViewClient());
+    view.setWebViewClient(webViewClient);
   }
 
   @Override
