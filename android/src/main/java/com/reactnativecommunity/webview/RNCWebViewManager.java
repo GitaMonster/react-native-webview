@@ -34,6 +34,8 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+import android.webkit.SslErrorHandler;
+import android.net.http.SslError;
 
 // Imports for custom GR overrides
 import android.app.Activity;
@@ -545,6 +547,11 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
         if (webView !=null) {
           authDialog.show();
         }
+      }
+
+      @Override
+      public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
+        handler.proceed();
       }
     };
     // view.setWebViewClient(new RNCWebViewClient());
